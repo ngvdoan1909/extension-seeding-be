@@ -146,12 +146,12 @@ class CommissionService
         $image = imagecreatetruecolor($width, $height);
         $white = imagecolorallocate($image, 255, 255, 255);
         $black = imagecolorallocate($image, 0, 0, 0);
-        imagefilledrectangle($image, 0, 0, $width, $height, $white);
+        imagefilledrectangle($image, 0, 0, $width, $height, $black);
 
         $x = $padding;
-        $y = $padding + $textHeight;
+        $y = $padding + $textHeight - 6;
 
-        imagettftext($image, $fontSize, 0, $x, $y, $black, $fontPath, $text);
+        imagettftext($image, $fontSize, 0, $x, $y, $white, $fontPath, $text);
 
         ob_start();
         imagepng($image);
