@@ -1,0 +1,92 @@
+services:
+  nginx:
+    build: './docker/nginx/'
+    container_name: container_nginx
+    depends_on:
+      - php
+      - mysql
+    networks:
+      - backend
+    ports:
+      - '${NGINX_PORT_HTTP}:80'
+      - '${NGINX_PORT_HTTPS}:443'
+    volumes:
+      - ./root/:/var/www/html/
+
+  php:
+    build:
+      context: './docker/php/'
+    container_name: container_php
+    networks:
+      - backend
+    volumes:
+      - ./root/:/var/www/html/
+      - ./docker/php/config/config.ini:/usr/local/etc/php/conf.d/uploads.ini
+
+  mysql:
+    image: mysql:8.0
+    command: [
+      'mysqld',
+      '--sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION',
+      '--character-set-server=utf8mb4',
+      '--collation-server=utf8mb4_bin',
+      '--default-authentication-plugin=mysql_native_password'
+    ]
+    ports:
+      - '${DB_CONTAINER_PORT}:3306'
+    container_name: container_mysql
+    networks:
+      - backend
+    volumes:
+      - container_mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: '${DB_DATABASE}'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_ROOT_PASSWORD: '${DB_ROOT_PASSWORD}'
+
+  adminer:
+    image: adminer
+    container_name: container_adminer
+    restart: always
+    ports:
+      - '8082:8080'   
+    networks:
+      - backend
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: '${MINIO_ROOT_USER}'
+      MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD}'
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - backend
+
+  mc:
+    image: minio/mc
+    container_name: minio_mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+        sleep 5;
+        mc alias set local http://minio:9000 minioadmin minioadmin;
+        mc mb --with-lock local/extension-seeding || echo 'Bucket exists';
+        tail -f /dev/null
+      "
+    networks:
+      - backend
+
+networks:
+  backend:
+
+volumes:
+  container_mysql_data: {}
+  minio-data: {}

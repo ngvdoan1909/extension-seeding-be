@@ -1,0 +1,17 @@
+*.env
+./root/.env
+root/public/storage
+root/public/vendor
+root/resources/lang
+root/storage/app/*
+root/storage/framework/cache/*
+root/storage/framework/sessions/*
+root/storage/framework/view/*
+root/storage/framework/testing/*
+root/storage/logs/*
+root/node_modules
+root/.idea
+root/worker.log
+root/composer.lock
+.vscode
+.DS_Store
