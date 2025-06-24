@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\CommissionController;
+use App\Http\Controllers\Api\Auth\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,3 +16,16 @@ Route::prefix('admin')
                 Route::delete('/{id}', [CommissionController::class, 'destroy']);
             });
     });
+
+
+Route::prefix('auth')->group(function () {
+    Route::post('register', [AuthController::class, 'register']);
+    Route::post('login', [AuthController::class, 'login']);
+
+    Route::middleware('auth:api')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout']);
+        Route::get('profile', [AuthController::class, 'profile']);
+        Route::post('verify', [AuthController::class, 'verifyToken']);
+        Route::post('refresh', [AuthController::class, 'refresh']);
+    });
+});
