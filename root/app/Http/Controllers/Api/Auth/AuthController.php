@@ -24,14 +24,14 @@ class AuthController extends Controller
             'password' => \Hash::make($data['password']),
         ]);
 
-        return $this->responseSuccess([
+        return $this->responseSuccess(
             [
                 'name' => $user['name'],
                 'email' => $user['email'],
             ],
             Response::HTTP_CREATED,
             'Đăng ký thành công'
-        ]);
+        );
     }
 
     public function login()
