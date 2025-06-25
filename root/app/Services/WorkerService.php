@@ -7,7 +7,8 @@ use App\Models\Worker;
 class WorkerService
 {
     protected $worker;
-    protected $commission;
+
+    const PATH_FAKE = 'fake';
 
     public function __construct(
         Worker $worker,
@@ -22,7 +23,6 @@ class WorkerService
     public function startWorker(array $data = [])
     {
         $imageData = [];
-        $bucket = env('MINIO_BUCKET', 'extension-seeding');
         $userId = $data['user_id'];
         $ip = $data['ip'];
 
@@ -63,7 +63,7 @@ class WorkerService
         $imageIntructions = $commission->images;
 
         foreach ($imageIntructions as $img) {
-            $imageData[] = \Storage::disk('minio')->url($bucket . '/' . $img['image']);
+            $imageData[] = \Storage::disk('minio')->url($img['image']);
         }
         // dd($imageData);
 
@@ -72,16 +72,16 @@ class WorkerService
                 'SĐT: ' . $infoFake['phone'],
                 'Tên: ' . $infoFake['name'],
             ],
-            'fake',
-            'public',
+            self::PATH_FAKE,
+            'minio',
         );
 
         // dd($imagesUserInfo);
 
         $data = [
-            'keyWordImage' => \Storage::disk('minio')->url($bucket . '/' . $commission->key_word_image),
+            'keyWordImage' => \Storage::disk('minio')->url($commission->key_word_image),
             'imageData' => $imageData,
-            'imagesUserInfo' => \Storage::disk('public')->url($imagesUserInfo)
+            'imagesUserInfo' => \Storage::disk('minio')->url($imagesUserInfo)
         ];
 
         return $data;
