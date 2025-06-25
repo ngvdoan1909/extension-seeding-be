@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\Api\Admin\CommissionController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Client\WorkerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')
+    ->middleware('auth:api')
     ->group(function () {
         Route::prefix('commissions')
             ->group(function () {
@@ -17,6 +19,11 @@ Route::prefix('admin')
             });
     });
 
+Route::prefix('worker')
+    ->middleware('auth:api')
+    ->group(function () {
+        Route::post('start', [WorkerController::class, 'startWorker']);
+    });
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
