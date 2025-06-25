@@ -26,12 +26,12 @@ class WorkerController extends Controller
                 'ip' => $request->ip(),
             ];
 
-            $worker = $this->workerService->startWorker($data);
+            $response = $this->workerService->startWorker($data);
 
             DB::commit();
 
             return $this->responseSuccess(
-                $worker,
+                $response,
                 Response::HTTP_CREATED,
                 'Tạo mới nhiệm vụ thành công'
             );

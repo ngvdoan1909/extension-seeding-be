@@ -22,4 +22,8 @@ class Commission extends Model
     {
         return $this->hasMany(InstructionImage::class, 'commission_id', 'commission_id');
     }
+
+    public function workers(){
+        return $this->hasMany(Worker::class, 'commission_id', 'commission_id');
+    }
 }

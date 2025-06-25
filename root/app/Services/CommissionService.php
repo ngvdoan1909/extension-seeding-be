@@ -65,7 +65,7 @@ class CommissionService
             ]);
         }
 
-        $keyWordImagePath = $this->generateAndStoreKeyWordImage($data['key_word']);
+        $keyWordImagePath = generateTextImage([$data['key_word']], self::PATH_UPLOAD_COMMISSION, 'minio');
         $commission->update(['key_word_image' => $keyWordImagePath]);
 
         return $commission;
@@ -98,7 +98,7 @@ class CommissionService
                 \Storage::disk('minio')->delete($commission->key_word_image);
             }
 
-            $keyWordImagePath = $this->generateAndStoreKeyWordImage($data['key_word']);
+            $keyWordImagePath = generateTextImage($data['key_word'], self::PATH_UPLOAD_COMMISSION, 'minio');
             $data['key_word_image'] = $keyWordImagePath;
         }
 
@@ -128,40 +128,5 @@ class CommissionService
         $commission->delete();
 
         return $commission;
-    }
-
-    protected function generateAndStoreKeyWordImage(string $text): string
-    {
-        $fontPath = public_path('fonts/NotoSans-Regular.ttf');
-        $fontSize = 20;
-        $padding = 20;
-
-        $bbox = imagettfbbox($fontSize, 0, $fontPath, $text);
-        $textWidth = $bbox[2] - $bbox[0];
-        $textHeight = $bbox[1] - $bbox[7];
-
-        $width = $textWidth + 2 * $padding;
-        $height = $textHeight + 2 * $padding;
-
-        $image = imagecreatetruecolor($width, $height);
-        $white = imagecolorallocate($image, 255, 255, 255);
-        $black = imagecolorallocate($image, 0, 0, 0);
-        imagefilledrectangle($image, 0, 0, $width, $height, $black);
-
-        $x = $padding;
-        $y = $padding + $textHeight - 6;
-
-        imagettftext($image, $fontSize, 0, $x, $y, $white, $fontPath, $text);
-
-        ob_start();
-        imagepng($image);
-        $imageData = ob_get_clean();
-        imagedestroy($image);
-
-        $fileName = \Str::random(40) . '.png';
-        $fullPath = self::PATH_UPLOAD_COMMISSION . '/' . $fileName;
-        \Storage::disk('minio')->put($fullPath, $imageData);
-
-        return $fullPath;
     }
 }
