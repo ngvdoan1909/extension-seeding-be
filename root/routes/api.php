@@ -21,11 +21,11 @@ Route::prefix('admin')
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
+    Route::post('verify', [AuthController::class, 'verifyToken']);
 
     Route::middleware('auth:api')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('profile', [AuthController::class, 'profile']);
-        Route::post('verify', [AuthController::class, 'verifyToken']);
         Route::post('refresh', [AuthController::class, 'refresh']);
     });
 });
