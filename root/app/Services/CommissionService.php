@@ -58,7 +58,8 @@ class CommissionService
 
         foreach ($images as $image) {
             $path = \Storage::disk('minio')->put(self::PATH_UPLOAD_INSTRCUTION, $image);
-
+            // dd($image);
+            
             $this->instructionImage->create([
                 'commission_id' => $commission->commission_id,
                 'image' => $path

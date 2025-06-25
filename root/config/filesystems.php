@@ -62,7 +62,6 @@ return [
             'secret' => env('MINIO_ROOT_PASSWORD', 'minioadmin'),
             'region' => env('MINIO_DEFAULT_REGION'),
             'bucket' => env('MINIO_BUCKET'),
-            'url' => env('MINIO_URL', 'http://localhost:9000'),
             'endpoint' => env('MINIO_ENDPOINT', 'http://minio:9000'),
             'use_path_style_endpoint' => true,
             'throw' => false,
