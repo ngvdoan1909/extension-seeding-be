@@ -25,6 +25,7 @@ class WorkerService
         $imageData = [];
         $userId = $data['user_id'];
         $ip = $data['ip'];
+        $numberRand = rand(3, 6);
 
         // lấy nhiệm vụ
         $commission = $this->commission
@@ -37,7 +38,6 @@ class WorkerService
                     });
             })
             ->with('images')
-            // ->select('commission_id', 'key_word_image')
             ->orderBy('daily_completed', 'asc')
             ->first();
         // dd($commission);
@@ -49,7 +49,7 @@ class WorkerService
         $infoFake = getRandomFakeInfo();
         // dd($infoFake);
 
-        $worker = $this->worker->create([
+        $work = $this->worker->create([
             'worker_id' => \Str::uuid(),
             'user_id' => $userId,
             'user_name' => $infoFake['name'],
@@ -79,9 +79,11 @@ class WorkerService
         // dd($imagesUserInfo);
 
         $data = [
+            'worker_id' => $work->worker_id,
             'keyWordImage' => \Storage::disk('minio')->url($commission->key_word_image),
             'imageData' => $imageData,
-            'imagesUserInfo' => \Storage::disk('minio')->url($imagesUserInfo)
+            'imagesUserInfo' => \Storage::disk('minio')->url($imagesUserInfo),
+            'numberRand' => $numberRand
         ];
 
         return $data;
