@@ -11,7 +11,7 @@ class WorkerSession extends Model
 
     protected $fillable = [
         'worker_id',
-        'keyword',
+        'code',
         'is_matched',
         'repeat_count',
         'current_repeat',
