@@ -19,14 +19,18 @@ Route::prefix('admin')
             });
     });
 
-Route::prefix('worker')
+Route::prefix('workers')
     ->middleware('auth:api')
     ->group(function () {
         Route::post('start-worker', [WorkerController::class, 'startWorker']);
         Route::delete('cancel-worker/{id}', [WorkerController::class, 'cancelWorker']);
-        Route::post('check-phone', [WorkerController::class, 'checkPhone']);
-        Route::post('get-code', [WorkerController::class, 'getCode']);
-        Route::post('worker-session', [WorkerController::class, 'workerSession']);
+        Route::post('worker-session', [WorkerController::class, 'startWorkerSession']);
+
+        Route::withoutMiddleware('auth:api')
+            ->group(function () {
+                Route::post('check-phone', [WorkerController::class, 'checkPhone']);
+                Route::post('get-code', [WorkerController::class, 'getCode']);
+            });
     });
 
 Route::prefix('auth')->group(function () {

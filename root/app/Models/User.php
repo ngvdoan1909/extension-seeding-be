@@ -31,7 +31,6 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'email' => $this->email,
-            'point' => $this->point,
         ];
     }
 

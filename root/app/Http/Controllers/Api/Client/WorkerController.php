@@ -97,14 +97,20 @@ class WorkerController extends Controller
         }
     }
 
-    public function workerSesison(Request $request)
+    public function startWorkerSession(Request $request)
     {
         DB::beginTransaction();
         try {
             $data = $request->all();
 
-            $workerSession = $this->workerService->startWorkerSession($data);
+            $response = $this->workerService->startWorkerSession($data);
+
             DB::commit();
+            return $this->responseSuccess(
+                $response,
+                Response::HTTP_OK,
+                'Kiểm tra code thành công'
+            );
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->responseError($e->getCode(), $e->getMessage());

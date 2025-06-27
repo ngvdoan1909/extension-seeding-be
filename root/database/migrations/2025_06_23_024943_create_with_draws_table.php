@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->uuid('user_id');
             $table->string('id_transaction', 12)->unique();
+            $table->bigInteger('amount')->default(0);
             $table->uuid('to');
             $table->text('note')->nullable();
             $table->timestamps();
