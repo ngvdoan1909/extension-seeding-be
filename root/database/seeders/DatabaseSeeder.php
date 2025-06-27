@@ -13,22 +13,21 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // \App\Models\User::factory(10)->create();
-
+        $admin_id = \Str::uuid()->toString();
+        $user_test_id = \Str::uuid()->toString();
         $users = [
             [
-                'user_id' => \Str::uuid()->toString(),
+                'user_id' => $admin_id,
                 'name' => 'Admin',
                 'email' => 'admin@gmail.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('6669996789'),
-                'point' => 10000000000,
+                'password' => \Illuminate\Support\Facades\Hash::make('1'),
                 'role' => 1
             ],
             [
-                'user_id' => \Str::uuid()->toString(),
-                'name' => 'test1',
-                'email' => 'test1@gmail.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('123456789'),
-                'point' => 5000000,
+                'user_id' => $user_test_id,
+                'name' => 'cr7',
+                'email' => 'quangtrunghytq203@gmail.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('1'),
                 'role' => 2
             ]
         ];
@@ -36,5 +35,15 @@ class DatabaseSeeder extends Seeder
         foreach ($users as $user) {
             \App\Models\User::factory()->create($user);
         }
+
+        \App\Models\Deposit::create([
+            'user_id' => $admin_id,
+            'id_transaction' => 'D_' . \Str::random(8),
+            'from' => null,
+            'note' => 'admin chuyển',
+            'amount' => 1000000000,
+            'created_at' => \Carbon\Carbon::now(),
+            'updated_at' => \Carbon\Carbon::now(),
+        ]);
     }
 }

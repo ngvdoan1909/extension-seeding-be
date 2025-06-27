@@ -2,6 +2,7 @@
 namespace App\Services;
 
 use App\Models\Commission;
+use App\Models\Deposit;
 use App\Models\Worker;
 use App\Models\WorkerSession;
 use Illuminate\Http\Response;
@@ -9,6 +10,7 @@ use Illuminate\Support\Facades\Cache;
 
 class WorkerService
 {
+    protected $deposit;
     protected $worker;
     protected $commission;
     protected $workerSession;
@@ -16,10 +18,12 @@ class WorkerService
     const PATH_FAKE = 'fake';
 
     public function __construct(
+        Deposit $deposit,
         Worker $worker,
         Commission $commission,
         WorkerSession $workerSession,
     ) {
+        $this->deposit = $deposit;
         $this->worker = $worker;
         $this->commission = $commission;
         $this->workerSession = $workerSession;
@@ -67,6 +71,8 @@ class WorkerService
             'is_completed' => false,
         ]);
 
+        Cache::put('worker_limit_' . $work->worker_id, $numberRand, now()->addMinutes(10));
+
         $imageIntructions = $commission->images;
 
         foreach ($imageIntructions as $img) {
@@ -112,11 +118,11 @@ class WorkerService
         return $worker;
     }
 
-    // kiểm tra sđt từ trang seeding gửi lên
     public function checkPhone($data)
     {
         $phone = $data['user_phone'];
         $ip = $data['ip'];
+        $cacheWaitTimeKey = $phone . '_' . $ip;
 
         $workerUser = $this->worker->select('user_phone', 'ip', 'is_completed')
             ->where('user_phone', $phone)
@@ -128,33 +134,35 @@ class WorkerService
             throw new \Exception('Có vẻ sai', Response::HTTP_PRECONDITION_FAILED);
         }
 
-        $lastThree = intval(substr($phone, -3));
-        $cacheKey = $phone . '_' . $ip;
+        if (Cache::has($cacheWaitTimeKey)) {
+            $expireAt = Cache::get($cacheWaitTimeKey);
+            $remaining = $expireAt - now()->timestamp;
 
-        if (Cache::has($cacheKey)) {
             return [
-                'timeOut' => Cache::get($cacheKey)
+                'timeOut' => max(0, $remaining)
             ];
         }
 
-        $waitTime = ($lastThree >= 10 && $lastThree <= 70)
-            ? $lastThree
-            : rand(20, 80);
+        $lastThree = intval(substr($phone, -3));
+        // $waitTime = ($lastThree >= 10 && $lastThree <= 70) ? $lastThree : rand(20, 80);
+        $waitTime = 10;
 
-        Cache::put($cacheKey, $waitTime, now()->addSeconds($waitTime + 5));
+        $expiredAt = now()->addSeconds($waitTime)->timestamp;
+
+        Cache::put($cacheWaitTimeKey, $expiredAt, now()->addMinutes(10));
 
         return [
             'timeOut' => $waitTime
         ];
     }
 
-    // kiểm tra và trả về code
     public function getCode(array $data = [])
     {
         $phone = $data['user_phone'];
         $ip = $data['ip'];
+        $cacheWaitTimeKey = $phone . '_' . $ip;
 
-        $workerUser = $this->worker->select('user_phone', 'ip', 'is_completed')
+        $workerUser = $this->worker->select('worker_id', 'user_phone', 'ip', 'is_completed')
             ->where('user_phone', $phone)
             ->where('ip', $ip)
             ->where('is_completed', false)
@@ -164,13 +172,35 @@ class WorkerService
             throw new \Exception('Có vẻ sai', Response::HTTP_PRECONDITION_FAILED);
         }
 
-        $cacheKey = $phone . '_' . $ip;
+        if (!Cache::has($cacheWaitTimeKey)) {
+            throw new \Exception(
+                'Bạn cần xác minh số điện thoại',
+                Response::HTTP_PRECONDITION_REQUIRED
+            );
+        }
 
-        if (Cache::has($cacheKey)) {
-            Cache::forget($cacheKey);
+        $expireAt = Cache::get($cacheWaitTimeKey);
+        $remaining = $expireAt - now()->timestamp;
+
+        if ($remaining > 0) {
+            throw new \Exception(
+                'Vui lòng chờ ' . $remaining . ' giây trước khi nhận mã',
+                Response::HTTP_TOO_EARLY
+            );
+        }
+
+        Cache::forget($cacheWaitTimeKey);
+
+        $cacheCodeKey = 'worker_code_' . $workerUser->worker_id;
+
+        if (Cache::has($cacheCodeKey)) {
+            return [
+                'code' => Cache::get($cacheCodeKey)
+            ];
         }
 
         $code = \Str::random(9);
+        Cache::put($cacheCodeKey, $code, now()->addMinutes(10));
 
         return [
             'code' => $code
@@ -179,6 +209,77 @@ class WorkerService
 
     public function startWorkerSession(array $data = [])
     {
+        $workerId = $data['worker_id'];
+        $inputCode = $data['code'];
 
+        $worker = $this->worker->where('worker_id', $workerId)->first();
+
+        if (!$worker) {
+            throw new \Exception('Không tìm thấy nhiệm vụ', Response::HTTP_NOT_FOUND);
+        }
+
+        $cacheCodeKey = 'worker_code_' . $workerId;
+        $cacheRepeatKey = 'worker_repeat_' . $workerId;
+        $cacheLimitKey = 'worker_limit_' . $workerId;
+        $cacheMatchCountKey = 'worker_match_count_' . $workerId;
+
+        if (!Cache::has($cacheCodeKey) || !Cache::has($cacheLimitKey)) {
+            throw new \Exception('Code hoặc giới hạn lượt đã hết hạn', Response::HTTP_BAD_REQUEST);
+        }
+
+        $cachedCode = Cache::get($cacheCodeKey);
+        $repeatLimit = Cache::get($cacheLimitKey);
+        $isMatched = $cachedCode === $inputCode;
+
+        $currentRepeat = Cache::get($cacheRepeatKey, 0) + 1;
+        $matchCount = Cache::get($cacheMatchCountKey, 0);
+
+        if ($currentRepeat > $repeatLimit) {
+            throw new \Exception('Đã vượt quá số lần nhập mã cho phép', Response::HTTP_FORBIDDEN);
+        }
+
+        if ($isMatched) {
+            $matchCount++;
+            Cache::put($cacheMatchCountKey, $matchCount, now()->addMinutes(10));
+        }
+
+        $this->workerSession->create([
+            'worker_session_id' => \Str::uuid(),
+            'worker_id' => $workerId,
+            'code' => $cachedCode,
+            'is_matched' => $isMatched,
+            'repeat_count' => $repeatLimit,
+            'current_repeat' => $currentRepeat
+        ]);
+
+        Cache::put($cacheRepeatKey, $currentRepeat, now()->addMinutes(10));
+
+        if ($currentRepeat === $repeatLimit) {
+            if ($matchCount === $repeatLimit) {
+                $worker->is_completed = true;
+                $worker->save();
+
+                $this->deposit->create([
+                    'user_id' => $worker->user_id,
+                    'id_transaction' => 'D_' . \Str::random(8),
+                    'amount' => 20000,
+                    'from' => null,
+                    'note' => 'done task'
+                ]);
+            }
+
+            Cache::forget($cacheRepeatKey);
+            Cache::forget($cacheLimitKey);
+            Cache::forget($cacheMatchCountKey);
+        }
+
+        Cache::forget($cacheCodeKey);
+
+        return [
+            'numberRandLeft' => max(0, $repeatLimit - $currentRepeat),
+            'isMatched' => $isMatched,
+            'isLastAttempt' => $currentRepeat === $repeatLimit
+        ];
     }
+
 }
