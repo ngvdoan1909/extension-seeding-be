@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Models\Commission;
 use App\Models\InstructionImage;
+use Illuminate\Http\Response;
 
 class CommissionService
 {
@@ -25,7 +26,7 @@ class CommissionService
         $commissions = $this->commission->with('images')->select('id', 'commission_id', 'key_word', 'key_word_image', 'url', 'daily_limit', 'daily_completed')->get();
 
         if ($commissions->isEmpty()) {
-            throw new \Exception('Không có dữ liệu');
+            throw new \Exception('Không có dữ liệu', Response::HTTP_NOT_FOUND);
         }
 
         return $commissions;
@@ -36,7 +37,7 @@ class CommissionService
         $commission = $this->commission->where('commission_id', $id)->first();
 
         if (!$commission) {
-            throw new \Exception('Không tìm thấy nhiệm vụ');
+            throw new \Exception('Không tìm thấy nhiệm vụ', Response::HTTP_NOT_FOUND);
         }
 
         return $commission;

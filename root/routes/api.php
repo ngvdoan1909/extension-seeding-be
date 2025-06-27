@@ -22,7 +22,11 @@ Route::prefix('admin')
 Route::prefix('worker')
     ->middleware('auth:api')
     ->group(function () {
-        Route::post('start', [WorkerController::class, 'startWorker']);
+        Route::post('start-worker', [WorkerController::class, 'startWorker']);
+        Route::delete('cancel-worker/{id}', [WorkerController::class, 'cancelWorker']);
+        Route::post('check-phone', [WorkerController::class, 'checkPhone']);
+        Route::post('get-code', [WorkerController::class, 'getCode']);
+        Route::post('worker-session', [WorkerController::class, 'workerSession']);
     });
 
 Route::prefix('auth')->group(function () {
