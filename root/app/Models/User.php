@@ -30,6 +30,7 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [
+            'point' => $this->getPointAttribute(),
             'email' => $this->email,
         ];
     }
@@ -42,4 +43,21 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function deposits()
+    {
+        return $this->hasMany(Deposit::class, 'user_id', 'user_id');
+    }
+
+    public function withdraws()
+    {
+        return $this->hasMany(WithDraw::class, 'user_id', 'user_id');
+    }
+
+    public function getPointAttribute()
+    {
+        $deposit = $this->deposits()->sum('amount');
+        $withdraw = $this->withdraws()->sum('amount');
+        return $deposit - $withdraw;
+    }
 }

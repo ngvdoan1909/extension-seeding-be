@@ -16,6 +16,7 @@ class WorkerService
     protected $workerSession;
 
     const PATH_FAKE = 'fake';
+    const AMOUNT = 2000;
 
     public function __construct(
         Deposit $deposit,
@@ -262,7 +263,7 @@ class WorkerService
                 $this->deposit->create([
                     'user_id' => $worker->user_id,
                     'id_transaction' => 'D_' . \Str::random(8),
-                    'amount' => 20000,
+                    'amount' => self::AMOUNT,
                     'from' => null,
                     'note' => 'done task'
                 ]);
