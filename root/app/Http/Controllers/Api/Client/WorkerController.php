@@ -37,7 +37,77 @@ class WorkerController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->responseError(Response::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
+            return $this->responseError($e->getCode(), $e->getMessage());
+        }
+    }
+
+    public function cancelWorker(string $id)
+    {
+        DB::beginTransaction();
+        try {
+            $this->workerService->cancelWorker($id);
+
+            DB::commit();
+            return $this->responseSuccess(
+                [],
+                Response::HTTP_OK,
+                'Hủy nhiệm vụ thành công'
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->responseError($e->getCode(), $e->getMessage());
+        }
+    }
+
+    public function checkPhone(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $data['ip'] = $request->ip();
+
+            $response = $this->workerService->checkPhone($data);
+
+            return $this->responseSuccess(
+                $response,
+                Response::HTTP_OK,
+                'Kiểm tra số điện thoại hợp lệ'
+            );
+
+        } catch (\Exception $e) {
+            return $this->responseError($e->getCode(), $e->getMessage());
+        }
+    }
+
+    public function getCode(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $data['ip'] = $request->ip();
+
+            $response = $this->workerService->getCode($data);
+
+            return $this->responseSuccess(
+                $response,
+                Response::HTTP_OK,
+                'Kiểm tra và trả về code thành công'
+            );
+
+        } catch (\Exception $e) {
+            return $this->responseError($e->getCode(), $e->getMessage());
+        }
+    }
+
+    public function workerSesison(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            $data = $request->all();
+
+            $workerSession = $this->workerService->startWorkerSession($data);
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->responseError($e->getCode(), $e->getMessage());
         }
     }
 }

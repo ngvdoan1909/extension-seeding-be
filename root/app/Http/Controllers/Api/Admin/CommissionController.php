@@ -31,7 +31,7 @@ class CommissionController extends Controller
                 'Lấy danh sách nhiệm vụ thành công'
             );
         } catch (\Exception $e) {
-            return $this->responseError(Response::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
+            return $this->responseError($e->getCode(), $e->getMessage());
         }
     }
 
@@ -46,7 +46,7 @@ class CommissionController extends Controller
                 'Lấy chi tiết nhiệm vụ thành công'
             );
         } catch (\Exception $e) {
-            return $this->responseError(Response::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
+            return $this->responseError($e->getCode(), $e->getMessage());
         }
     }
 
@@ -67,7 +67,7 @@ class CommissionController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->responseError(Response::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
+            return $this->responseError($e->getCode(), $e->getMessage());
         }
     }
 
@@ -88,7 +88,7 @@ class CommissionController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->responseError(Response::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
+            return $this->responseError($e->getCode(), $e->getMessage());
         }
     }
 
@@ -107,7 +107,7 @@ class CommissionController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->responseError(Response::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
+            return $this->responseError($e->getCode(), $e->getMessage());
         }
     }
 }

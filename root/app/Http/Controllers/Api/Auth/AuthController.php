@@ -6,32 +6,40 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|max:255|min:1',
-        ]);
+        DB::beginTransaction();
+        try {
+            $data = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email',
+                'password' => 'required|string|max:255|min:1',
+            ]);
 
-        $user = User::create([
-            'user_id' => \Str::uuid(),
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => \Hash::make($data['password']),
-        ]);
+            $user = User::create([
+                'user_id' => \Str::uuid(),
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => \Hash::make($data['password']),
+            ]);
 
-        return $this->responseSuccess(
-            [
-                'name' => $user['name'],
-                'email' => $user['email'],
-            ],
-            Response::HTTP_CREATED,
-            'Đăng ký thành công'
-        );
+            DB::commit();
+            return $this->responseSuccess(
+                [
+                    'name' => $user['name'],
+                    'email' => $user['email'],
+                ],
+                Response::HTTP_CREATED,
+                'Đăng ký thành công'
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->responseError($e->getCode(), $e->getMessage());
+        }
     }
 
     public function login()
@@ -72,7 +80,7 @@ class AuthController extends Controller
                 'Keng'
             );
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Token lỗi'], 401);
+            return response()->json(['message' => 'Token lỗi'], Response::HTTP_UNAUTHORIZED);
         }
     }
 
@@ -98,7 +106,7 @@ class AuthController extends Controller
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 666
+            'expires_in' => auth()->factory()->getTTL() * 60
         ]);
     }
 }

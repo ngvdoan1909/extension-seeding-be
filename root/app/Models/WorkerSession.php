@@ -10,6 +10,7 @@ class WorkerSession extends Model
     use HasFactory;
 
     protected $fillable = [
+        'worker_session_id',
         'worker_id',
         'code',
         'is_matched',
