@@ -12,6 +12,7 @@ return new class extends Migration {
     {
         Schema::create('commissions', function (Blueprint $table) {
             $table->id();
+            $table->uuid('website_id');
             $table->uuid('commission_id')->unique();
             $table->string('key_word', 100);
             $table->string('key_word_image')->nullable();
