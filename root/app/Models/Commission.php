@@ -10,6 +10,7 @@ class Commission extends Model
     use HasFactory;
 
     protected $fillable = [
+        'website_id',
         'commission_id',
         'key_word',
         'key_word_image',
@@ -18,12 +19,18 @@ class Commission extends Model
         'daily_completed'
     ];
 
+    public function website()
+    {
+        return $this->belongsTo(Website::class, 'website_id', 'website_id');
+    }
+
     public function images()
     {
         return $this->hasMany(InstructionImage::class, 'commission_id', 'commission_id');
     }
 
-    public function workers(){
+    public function workers()
+    {
         return $this->hasMany(Worker::class, 'commission_id', 'commission_id');
     }
 }
