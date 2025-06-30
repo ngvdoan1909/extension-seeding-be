@@ -21,14 +21,14 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Admin',
                 'email' => 'admin@gmail.com',
                 'password' => \Illuminate\Support\Facades\Hash::make('1'),
-                'role' => 1
+                'role' => \App\Enums\RoleEnum::ADMIN->value
             ],
             [
                 'user_id' => $user_test_id,
                 'name' => 'cr7',
                 'email' => 'quangtrunghytq203@gmail.com',
                 'password' => \Illuminate\Support\Facades\Hash::make('1'),
-                'role' => 2
+                'role' => \App\Enums\RoleEnum::MEMBER->value
             ]
         ];
 

@@ -56,6 +56,12 @@ class User extends Authenticatable implements JWTSubject
 
     public function getPointAttribute()
     {
+        return $this->getBalanceVndAttribute() * 10;
+    }
+
+    // số dư
+    public function getBalanceVndAttribute()
+    {
         $deposit = $this->deposits()->sum('amount');
         $withdraw = $this->withdraws()->sum('amount');
         return $deposit - $withdraw;

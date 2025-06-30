@@ -37,7 +37,8 @@ class WebsiteController extends Controller
 
             return view(self::PATH_VIEW . __FUNCTION__, compact('data'));
         } catch (\Exception $e) {
-            dd($e->getMessage());
+            // dd($e->getMessage());
+            return back()->withInput()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 
@@ -131,8 +132,7 @@ class WebsiteController extends Controller
             DB::rollBack();
             // dd($e->getMessage());
 
-            return back()->withInput()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 

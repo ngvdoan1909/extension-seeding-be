@@ -4,7 +4,7 @@
             <div class="d-flex">
                 <!-- LOGO -->
                 <div class="navbar-brand-box horizontal-logo">
-                    <a href="#" class="logo logo-dark">
+                    <a href="{{route('admin.dashboard')}}" class="logo logo-dark">
                         <span class="logo-sm">
                             <img src="{{ asset('admin/assets/images/logo-sm.png') }}" alt="" height="22">
                         </span>
@@ -13,7 +13,7 @@
                         </span>
                     </a>
 
-                    <a href="#" class="logo logo-light">
+                    <a href="{{route('admin.dashboard')}}" class="logo logo-light">
                         <span class="logo-sm">
                             <img src="{{ asset('admin/assets/images/logo-sm.png') }}" alt="" height="22">
                         </span>
@@ -67,15 +67,18 @@
                     </button>
 
                     <div class="dropdown-menu dropdown-menu-end">
-                        <!-- item-->
-                        <h6 class="dropdown-header">Chào mừng {{ Auth::User()->name ?? 'ADMIN' }}!</h6>
-
+                        <h6 class="dropdown-header">Chào mừng {{ Auth::user()->name ?? 'ADMIN' }}!</h6>
                         <div class="dropdown-divider"></div>
 
-                        <a class="dropdown-item" href="pages-profile-settings.html">
-                            <i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"></i>
-                            <span class="align-middle">Settings</span>
-                        </a>
+                        <form id="logout-form" action="{{ route('admin.logout') }}" method="POST"
+                            style="display: none;">
+                            @csrf
+                        </form>
+
+                        <button class="dropdown-item"
+                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                            <span class="align-middle">Đăng xuất</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -86,7 +89,7 @@
 <div class="app-menu navbar-menu">
     <!-- LOGO -->
     <div class="navbar-brand-box">
-        <a href="#" class="logo logo-light">
+        <a href="{{route('admin.dashboard')}}" class="logo logo-light">
             <span class="logo-sm">
                 <img src="{{ asset('admin/assets/images/logo-sm.png') }}" alt="" height="22">
             </span>
