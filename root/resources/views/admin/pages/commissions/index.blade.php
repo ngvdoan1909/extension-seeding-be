@@ -1,7 +1,7 @@
 @extends('admin.layout.master')
 
 @section('title')
-    Danh sách website
+    Danh sách nhiệm vụ
 @endsection
 
 @section('style-libs')
@@ -17,9 +17,9 @@
     <div class="row">
         <div class="col-12">
             <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                <h4 class="mb-sm-0">Website</h4>
+                <h4 class="mb-sm-0">Nhiệm vụ</h4>
 
-                <a href="{{ Route('admin.websites.create') }}" class="btn btn-primary">Thêm mới Website</a>
+                <a href="{{ Route('admin.commissions.create') }}" class="btn btn-primary">Thêm mới nhiệm vụ</a>
             </div>
         </div>
     </div>
@@ -28,7 +28,7 @@
         <div class="col-lg-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Danh sách Website</h5>
+                    <h5 class="card-title mb-0">Danh sách nhiệm vụ</h5>
                 </div>
                 <div class="card-body">
                     <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle"
@@ -36,8 +36,12 @@
                         <thead>
                             <tr>
                                 <th width="10px">STT</th>
-                                <th>Tên</th>
-                                <th>Tên miền</th>
+                                <th>Tên website</th>
+                                <th>Từ khóa</th>
+                                <th>Ảnh từ khóa</th>
+                                <th>Url</th>
+                                <th>Lượt truy cập cần/ngày</th>
+                                <th>Lượt hoàn thành/ngày</th>
                                 <th width="10px">Quản lý</th>
                             </tr>
                         </thead>
@@ -46,8 +50,16 @@
                             @foreach ($data as $key => $item)
                                 <tr class="text-start">
                                     <td>{{ $key + 1 }}</td>
-                                    <td>{{ $item->name }}</td>
-                                    <td>{{ $item->domain }}</td>
+                                    <td>{{ $item->website->name }}</td>
+                                    <td>{{ $item->key_word }}</td>
+                                    <td>
+                                        <img style="width: auto; height: 100px; object-fit: cover;"
+                                            src="{{\Storage::disk('minio')->url($item->key_word_image)}}"
+                                            alt="{{$item->key_word}}">
+                                    </td>
+                                    <td>{{ $item->url }}</td>
+                                    <td>{{ $item->daily_limit }}</td>
+                                    <td>{{ $item->daily_completed }}</td>
                                     <td>
                                         <div class="dropdown d-inline-block">
                                             <button class="btn btn-soft-secondary btn-sm dropdown" type="button"
@@ -56,14 +68,14 @@
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li>
-                                                    <a href="{{ Route('admin.websites.show', $item->website_id) }}"
+                                                    <a href="{{ Route('admin.commissions.show', $item->commission_id) }}"
                                                         class="dropdown-item edit-item-btn">
                                                         <i class="ri-pencil-fill align-bottom me-2 text-muted"></i>
                                                         Sửa
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <form action="{{ route('admin.websites.destroy', $item->website_id) }}"
+                                                    <form action="{{ route('admin.commissions.destroy', $item->commission_id) }}"
                                                         method="POST">
                                                         @csrf
                                                         @method('DELETE')

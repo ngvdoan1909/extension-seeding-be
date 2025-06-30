@@ -25,10 +25,13 @@ class CommissionRequest extends FormRequest
     public function rulesForCreate(): array
     {
         return [
-            'key_word' => 'required|string|max:100',
-            'url' => 'required|string|max:255',
-            'daily_limit' => 'required|integer',
-            'image.*' => 'nullable|mimes:png,jpg,jpeg,webp'
+            'website_id' => 'required|uuid|exists:websites,website_id',
+            'commissions' => 'required|array|min:1',
+            'commissions.*.key_word' => 'required|string|max:100',
+            'commissions.*.url' => 'required|string|max:255|unique:commissions,url',
+            'commissions.*.daily_limit' => 'required|integer|min:0',
+            'commissions.*.image' => 'nullable|array',
+            'commissions.*.image.*' => 'mimes:png,jpg,jpeg,webp'
         ];
     }
 
@@ -37,7 +40,7 @@ class CommissionRequest extends FormRequest
         return [
             'key_word' => 'required|string|max:100',
             'url' => 'required|string|max:255',
-            'daily_limit' => 'required|integer',
+            'daily_limit' => 'required|integer|min:0',
             'image.*' => 'nullable|mimes:png,jpg,jpeg,webp'
         ];
     }
@@ -45,15 +48,17 @@ class CommissionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'key_word.required' => 'Từ khóa tìm kiếm đang trống',
-            'key_word.string' => 'Từ khóa tìm kiếm phải là 1 chuỗi',
-            'key_word.max' => 'Từ khóa tìm kiếm có tối đa là 100 ký tự',
-            'url.required' => 'Đường dẫn đang trống',
-            'url.string' => 'Đường dẫn phải là 1 chuỗi',
-            'url.max' => 'Đường dẫn có tối đa là 255 ký tự',
-            'daily_limit.required' => 'Số lượng 1 ngày đang trống',
-            'daily_limit.integer' => 'Số lượng 1 ngày phải là 1 số',
-            'image.*.mimes' => 'Ảnh phải có định dạng PNG, JPG, JPEG, WEBP',
+            'website_id.required' => 'Vui lòng chọn website',
+            'website_id.uuid' => 'ID website không hợp lệ',
+            'website_id.exists' => 'Website không tồn tại',
+            'commissions.required' => 'Phải có ít nhất một nhiệm vụ',
+            'commissions.*.key_word.required' => 'Từ khóa tìm kiếm đang trống',
+            'commissions.*.key_word.max' => 'Từ khóa tìm kiếm có tối đa là 100 ký tự',
+            'commissions.*.url.required' => 'Đường dẫn đang trống',
+            'commissions.*.url.unique' => 'Đường dẫn đã tồn tại',
+            'commissions.*.daily_limit.required' => 'Số lượng 1 ngày đang trống',
+            'commissions.*.daily_limit.min' => 'Số lượng không được âm',
+            'commissions.*.image.*.mimes' => 'Ảnh phải có định dạng PNG, JPG, JPEG, WEBP',
         ];
     }
 }
