@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Models\Commission;
 use App\Models\Deposit;
+use App\Models\User;
 use App\Models\Worker;
 use App\Models\WorkerSession;
 use Illuminate\Http\Response;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 class WorkerService
 {
     protected $deposit;
+    protected $user;
     protected $worker;
     protected $commission;
     protected $workerSession;
@@ -20,11 +22,13 @@ class WorkerService
 
     public function __construct(
         Deposit $deposit,
+        User $user,
         Worker $worker,
         Commission $commission,
         WorkerSession $workerSession,
     ) {
         $this->deposit = $deposit;
+        $this->user = $user;
         $this->worker = $worker;
         $this->commission = $commission;
         $this->workerSession = $workerSession;
@@ -37,7 +41,8 @@ class WorkerService
         $imageData = [];
         $userId = $data['user_id'];
         $ip = $data['ip'];
-        $numberRand = rand(3, 5);
+        // $numberRand = rand(3, 5);
+        $numberRand = 2;
 
         // lấy nhiệm vụ
         $commission = $this->commission
@@ -132,7 +137,7 @@ class WorkerService
             ->first();
 
         if (!$workerUser) {
-            throw new \Exception('Có vẻ sai', Response::HTTP_PRECONDITION_FAILED);
+            throw new \Exception('Số điện thoại không đúng', Response::HTTP_PRECONDITION_FAILED);
         }
 
         if (Cache::has($cacheWaitTimeKey)) {
@@ -170,7 +175,7 @@ class WorkerService
             ->first();
 
         if (!$workerUser) {
-            throw new \Exception('Có vẻ sai', Response::HTTP_PRECONDITION_FAILED);
+            throw new \Exception('Số điện thoại không đúng', Response::HTTP_PRECONDITION_FAILED);
         }
 
         if (!Cache::has($cacheWaitTimeKey)) {
@@ -276,11 +281,13 @@ class WorkerService
 
         Cache::forget($cacheCodeKey);
 
+        $user = $this->user->where('user_id', $worker->user_id)->first();
+
         return [
             'numberRandLeft' => max(0, $repeatLimit - $currentRepeat),
             'isMatched' => $isMatched,
-            'isLastAttempt' => $currentRepeat === $repeatLimit
+            'isLastAttempt' => $currentRepeat === $repeatLimit,
+            'totalPoint' => $user->getPointAttribute()
         ];
     }
-
 }

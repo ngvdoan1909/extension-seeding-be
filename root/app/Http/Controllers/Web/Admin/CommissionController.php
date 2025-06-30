@@ -69,8 +69,9 @@ class CommissionController extends Controller
     {
         DB::beginTransaction();
         try {
-            $website_id = $request->input('website_id');
-            $commissionsData = $request->input('commissions');
+            $validated = $request->validated();
+            $website_id = $validated['website_id'];
+            $commissionsData = $validated['commissions'];
             $createdCommissions = [];
 
             foreach ($commissionsData as $data) {
@@ -87,6 +88,8 @@ class CommissionController extends Controller
                 if (!empty($images) && !is_array($images)) {
                     $images = [$images];
                 }
+
+                // dd($images);
 
                 foreach ($images as $image) {
                     $path = \Storage::disk('minio')->put(
