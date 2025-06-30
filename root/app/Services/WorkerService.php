@@ -19,6 +19,7 @@ class WorkerService
 
     const PATH_FAKE = 'fake';
     const AMOUNT = 2000;
+    const LIMIT_TRY = 3;
 
     public function __construct(
         Deposit $deposit,
@@ -77,6 +78,7 @@ class WorkerService
             'is_completed' => false,
         ]);
 
+        Cache::put('limit_try' . $work->worker_id, self::LIMIT_TRY, now()->addMinutes(10));
         Cache::put('worker_limit_' . $work->worker_id, $numberRand, now()->addMinutes(10));
 
         $imageIntructions = $commission->images;
@@ -228,6 +230,7 @@ class WorkerService
         $cacheRepeatKey = 'worker_repeat_' . $workerId;
         $cacheLimitKey = 'worker_limit_' . $workerId;
         $cacheMatchCountKey = 'worker_match_count_' . $workerId;
+        $cacheTryKey = 'limit_try' . $workerId;
 
         if (!Cache::has($cacheCodeKey) || !Cache::has($cacheLimitKey)) {
             throw new \Exception('Code hoặc giới hạn lượt đã hết hạn', Response::HTTP_BAD_REQUEST);
@@ -237,8 +240,9 @@ class WorkerService
         $repeatLimit = Cache::get($cacheLimitKey);
         $isMatched = $cachedCode === $inputCode;
 
-        $currentRepeat = Cache::get($cacheRepeatKey, 0) + 1;
         $matchCount = Cache::get($cacheMatchCountKey, 0);
+        $currentRepeat = Cache::get($cacheRepeatKey, 0);
+        $limitTry = Cache::get($cacheTryKey, self::LIMIT_TRY);
 
         if ($currentRepeat > $repeatLimit) {
             throw new \Exception('Đã vượt quá số lần nhập mã cho phép', Response::HTTP_FORBIDDEN);
@@ -246,7 +250,19 @@ class WorkerService
 
         if ($isMatched) {
             $matchCount++;
+            $currentRepeat++;
+            Cache::forget($cacheCodeKey);
             Cache::put($cacheMatchCountKey, $matchCount, now()->addMinutes(10));
+        } else {
+            $limitTry--;
+
+            if ($limitTry <= 0) {
+                $currentRepeat++;
+                Cache::put($cacheRepeatKey, $currentRepeat, now()->addMinutes(10));
+                $limitTry = self::LIMIT_TRY;
+            }
+
+            Cache::put($cacheTryKey, $limitTry, now()->addMinutes(10));
         }
 
         $this->workerSession->create([
@@ -279,15 +295,14 @@ class WorkerService
             Cache::forget($cacheMatchCountKey);
         }
 
-        Cache::forget($cacheCodeKey);
-
         $user = $this->user->where('user_id', $worker->user_id)->first();
 
         return [
             'numberRandLeft' => max(0, $repeatLimit - $currentRepeat),
             'isMatched' => $isMatched,
             'isLastAttempt' => $currentRepeat === $repeatLimit,
-            'totalPoint' => $user->getPointAttribute()
+            'totalPoint' => $user->getPointAttribute(),
+            'limitTry' => $limitTry,
         ];
     }
 }
