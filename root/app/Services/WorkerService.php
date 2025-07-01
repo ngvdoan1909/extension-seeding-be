@@ -78,7 +78,9 @@ class WorkerService
             'is_completed' => false,
         ]);
 
-        Cache::put('limit_try' . $work->worker_id, self::LIMIT_TRY, now()->addMinutes(10));
+        $cacheLimit = $work->worker_id . '_' . $userId;
+
+        Cache::put('limit_try' . $cacheLimit, self::LIMIT_TRY, now()->addMinutes(10));
         Cache::put('worker_limit_' . $work->worker_id, $numberRand, now()->addMinutes(10));
 
         $imageIntructions = $commission->images;
@@ -230,7 +232,7 @@ class WorkerService
         $cacheRepeatKey = 'worker_repeat_' . $workerId;
         $cacheLimitKey = 'worker_limit_' . $workerId;
         $cacheMatchCountKey = 'worker_match_count_' . $workerId;
-        $cacheTryKey = 'limit_try' . $workerId;
+        $cacheTryKey = 'limit_try' . $workerId . '_' . $worker->user_id;
 
         if (!Cache::has($cacheCodeKey) || !Cache::has($cacheLimitKey)) {
             throw new \Exception('Code hoặc giới hạn lượt đã hết hạn', Response::HTTP_BAD_REQUEST);
