@@ -7,38 +7,63 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
+        'user_id',
         'name',
         'email',
         'password',
+        'point',
+        'role'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [
+            'point' => $this->getPointAttribute(),
+            'email' => $this->email,
+        ];
+    }
+
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function deposits()
+    {
+        return $this->hasMany(Deposit::class, 'user_id', 'user_id');
+    }
+
+    public function withdraws()
+    {
+        return $this->hasMany(WithDraw::class, 'user_id', 'user_id');
+    }
+
+    public function getPointAttribute()
+    {
+        return $this->getBalanceVndAttribute() * 10;
+    }
+
+    // số dư
+    public function getBalanceVndAttribute()
+    {
+        $deposit = $this->deposits()->sum('amount');
+        $withdraw = $this->withdraws()->sum('amount');
+        return $deposit - $withdraw;
+    }
 }
