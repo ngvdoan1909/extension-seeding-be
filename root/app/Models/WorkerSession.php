@@ -13,8 +13,6 @@ class WorkerSession extends Model
         'worker_session_id',
         'worker_id',
         'code',
-        'is_matched',
-        'repeat_count',
-        'current_repeat',
+        'is_matched'
     ];
 }
