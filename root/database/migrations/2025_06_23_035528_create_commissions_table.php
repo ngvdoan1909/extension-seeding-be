@@ -14,9 +14,6 @@ return new class extends Migration {
             $table->id();
             $table->uuid('website_id');
             $table->uuid('commission_id')->unique();
-            $table->string('key_word', 100);
-            $table->string('key_word_image')->nullable();
-            $table->string('url')->unique();
             $table->integer('daily_limit')->default(0);
             $table->integer('daily_completed')->default(0);
             $table->timestamps();

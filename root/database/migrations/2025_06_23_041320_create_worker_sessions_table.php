@@ -15,8 +15,6 @@ return new class extends Migration {
             $table->uuid('worker_id');
             $table->string('keyword');
             $table->boolean('is_matched')->default(false);
-            $table->tinyInteger('repeat_count')->default(0);
-            $table->tinyInteger('current_repeat')->default(0);
             $table->timestamps();
         });
     }

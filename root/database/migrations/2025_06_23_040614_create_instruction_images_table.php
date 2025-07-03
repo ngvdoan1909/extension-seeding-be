@@ -12,8 +12,8 @@ return new class extends Migration {
     {
         Schema::create('instruction_images', function (Blueprint $table) {
             $table->id();
-            $table->uuid('commission_id');
-            $table->string('image')->nullable();
+            $table->uuid('commission_url_id');
+            $table->string('image');
             $table->timestamps();
         });
     }

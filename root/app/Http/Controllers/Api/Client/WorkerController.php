@@ -102,6 +102,7 @@ class WorkerController extends Controller
         DB::beginTransaction();
         try {
             $data = $request->all();
+            $data['ip'] = $request->ip();
 
             $response = $this->workerService->startWorkerSession($data);
 
