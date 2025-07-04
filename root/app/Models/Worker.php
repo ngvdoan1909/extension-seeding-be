@@ -15,6 +15,7 @@ class Worker extends Model
         'user_name',
         'user_phone',
         'commission_id',
+        'commission_url_id',
         'ip',
         'executed_at',
         'is_completed',
