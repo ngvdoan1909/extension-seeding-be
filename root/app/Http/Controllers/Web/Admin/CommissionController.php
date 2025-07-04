@@ -44,9 +44,7 @@ class CommissionController extends Controller
                 'urls' => function ($query) {
                     $query->with('images');
                 }
-            ])
-                ->latest('id')
-                ->get();
+            ])->latest('id')->get();
 
             return view(self::PATH_VIEW . __FUNCTION__, compact('data'));
         } catch (\Exception $e) {
@@ -58,12 +56,11 @@ class CommissionController extends Controller
     {
         try {
             $commission = $this->commission->with([
+                'website',
                 'urls' => function ($query) {
-                    $query->with('images')->orderBy('order');
+                    $query->with('images');
                 }
-            ])
-                ->where('commission_id', $id)
-                ->firstOrFail();
+            ])->where('commission_id', $id)->firstOrFail();
 
             return view(self::PATH_VIEW . __FUNCTION__, compact('commission'));
         } catch (\Exception $e) {
