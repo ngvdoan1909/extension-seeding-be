@@ -294,6 +294,8 @@ class WorkerService
             'is_matched' => $isMatched
         ]);
 
+        $worker->update(['is_completed' => true]);
+
         Cache::put($cacheRepeatKey, $currentRepeat, now()->addMinutes(10));
 
         $newUrlData = null;
