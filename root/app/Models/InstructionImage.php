@@ -10,7 +10,12 @@ class InstructionImage extends Model
     use HasFactory;
 
     protected $fillable = [
-        'commission_id',
+        'commission_url_id',
         'image'
     ];
+
+    public function commissionUrl()
+    {
+        return $this->belongsTo(CommissionUrl::class, 'commission_url_id', 'commission_url_id');
+    }
 }

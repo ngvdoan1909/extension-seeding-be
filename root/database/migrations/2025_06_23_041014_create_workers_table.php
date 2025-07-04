@@ -19,9 +19,6 @@ return new class extends Migration {
             $table->date('executed_at');
             $table->boolean('is_completed')->default(false);
             $table->timestamps();
-
-            $table->unique(['user_id', 'commission_id', 'executed_at']);
-            $table->unique(['ip', 'commission_id', 'executed_at']);
         });
     }
 

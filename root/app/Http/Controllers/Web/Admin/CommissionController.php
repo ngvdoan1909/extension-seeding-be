@@ -5,57 +5,69 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommissionRequest;
 use App\Models\Commission;
+use App\Models\CommissionUrl; // Model mới
 use App\Models\InstructionImage;
 use App\Models\Website;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CommissionController extends Controller
 {
     protected $website;
     protected $commission;
+    protected $commissionUrl;
     protected $instructionImage;
 
     const PATH_VIEW = 'admin.pages.commissions.';
     const PATH_UPLOAD_COMMISSION = 'commission';
-    const PATH_UPLOAD_INSTRCUTION = 'instruction';
+    const PATH_UPLOAD_INSTRUCTION = 'instruction';
 
     public function __construct(
         Website $website,
         Commission $commission,
+        CommissionUrl $commissionUrl,
         InstructionImage $instructionImage
     ) {
         $this->website = $website;
         $this->commission = $commission;
+        $this->commissionUrl = $commissionUrl;
         $this->instructionImage = $instructionImage;
     }
 
     public function index()
     {
         try {
-            $data = $this->commission->with(['images', 'website'])
-                ->select('id', 'website_id', 'commission_id', 'key_word', 'key_word_image', 'url', 'daily_limit', 'daily_completed')
+            $data = $this->commission->with([
+                'website',
+                'urls' => function ($query) {
+                    $query->with('images');
+                }
+            ])
                 ->latest('id')
                 ->get();
 
             return view(self::PATH_VIEW . __FUNCTION__, compact('data'));
         } catch (\Exception $e) {
-            // dd($e->getMessage());
-            return back()->withInput()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 
     public function show(string $id)
     {
         try {
-            $commission = $this->commission->where('commission_id', $id)->first();
-            // dd($commission);
+            $commission = $this->commission->with([
+                'urls' => function ($query) {
+                    $query->with('images')->orderBy('order');
+                }
+            ])
+                ->where('commission_id', $id)
+                ->firstOrFail();
 
             return view(self::PATH_VIEW . __FUNCTION__, compact('commission'));
-
         } catch (\Exception $e) {
-            dd($e->getMessage());
-            return back()->withInput()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 
@@ -65,64 +77,59 @@ class CommissionController extends Controller
         return view(self::PATH_VIEW . __FUNCTION__, compact('websites'));
     }
 
-    public function store(CommissionRequest $request)
+    public function store(Request $request)
     {
         DB::beginTransaction();
         try {
-            $validated = $request->validated();
-            $website_id = $validated['website_id'];
-            $commissionsData = $validated['commissions'];
-            $createdCommissions = [];
+            $data = $request->all();
 
-            foreach ($commissionsData as $data) {
-                $commission = $this->commission->create([
-                    'website_id' => $website_id,
-                    'commission_id' => \Str::uuid(),
-                    'key_word' => $data['key_word'],
-                    'url' => $data['url'],
-                    'daily_limit' => $data['daily_limit'],
-                    'daily_completed' => 0
+            $commission = $this->commission->create([
+                'website_id' => $data['website_id'],
+                'commission_id' => Str::uuid(),
+                'daily_limit' => $data['daily_limit'],
+                'daily_completed' => 0
+            ]);
+
+            foreach ($data['urls'] as $index => $urlData) {
+                $commissionUrl = $this->commissionUrl->create([
+                    'commission_url_id' => Str::uuid(),
+                    'commission_id' => $commission->commission_id,
+                    'url' => $urlData['url'],
+                    'key_word' => $urlData['key_word'],
                 ]);
 
-                $images = $data['image'] ?? [];
-                if (!empty($images) && !is_array($images)) {
-                    $images = [$images];
-                }
+                if (!empty($urlData['images'])) {
+                    foreach ($urlData['images'] as $image) {
+                        $path = \Storage::disk('minio')->put(
+                            self::PATH_UPLOAD_INSTRUCTION,
+                            $image
+                        );
 
-                // dd($images);
-
-                foreach ($images as $image) {
-                    $path = \Storage::disk('minio')->put(
-                        self::PATH_UPLOAD_INSTRCUTION,
-                        $image
-                    );
-
-                    $this->instructionImage->create([
-                        'commission_id' => $commission->commission_id,
-                        'image' => $path
-                    ]);
+                        $this->instructionImage->create([
+                            'commission_url_id' => $commissionUrl->commission_url_id,
+                            'image' => $path
+                        ]);
+                    }
                 }
 
                 $keyWordImagePath = generateTextImage(
-                    [$data['key_word']],
+                    [$urlData['key_word']],
                     self::PATH_UPLOAD_COMMISSION,
                     'minio'
                 );
 
-                $commission->update(['key_word_image' => $keyWordImagePath]);
-
-                $createdCommissions[] = $commission;
+                $commissionUrl->update(['key_word_image' => $keyWordImagePath]);
             }
 
             DB::commit();
 
             return redirect()->route('admin.commissions.index')
-                ->with('success', 'Đã thêm ' . count($createdCommissions) . ' nhiệm vụ thành công!');
+                ->with('success', 'Thêm nhiệm vụ thành công');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            logger()->error('Commission create error: ' . $e->getMessage());
-
+            logger()->error('Commission store error: ' . $e->getMessage());
+            dd($e->getMessage());
             return back()->withInput()
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
@@ -133,67 +140,38 @@ class CommissionController extends Controller
         DB::beginTransaction();
         try {
             $data = $request->validated();
+            $commission = $this->commission->where('commission_id', $id)->firstOrFail();
 
-            $commission = $this->commission->where('commission_id', $id)->first();
+            $commission->update([
+                'name' => $data['name'],
+                'daily_limit' => $data['daily_limit'],
+                'website_id' => $data['website_id']
+            ]);
 
-            if (!$commission) {
-                throw new \Exception("Không tìm thấy nhiệm vụ");
-            }
+            $commission->urls()->delete();
 
-            if (isset($data['image'])) {
-                $instructionImages = $commission->images;
-                foreach ($instructionImages as $image) {
-                    try {
-                        \Storage::disk('minio')->delete($image->image);
-                        $image->delete();
-                    } catch (\Exception $e) {
-                        // dd($e->getMessage());
-                    }
-                }
+            foreach ($data['urls'] as $urlData) {
+                $url = $this->commissionUrl->create([
+                    'commission_id' => $commission->commission_id,
+                    'url' => $urlData['url'],
+                    'key_word' => $urlData['key_word'],
+                    'order' => $this->commissionUrl->where('commission_id', $commission->commission_id)->count()
+                ]);
 
-                $images = is_array($data['image']) ? $data['image'] : [$data['image']];
-                foreach ($images as $image) {
-                    try {
-                        $path = \Storage::disk('minio')->put(self::PATH_UPLOAD_INSTRCUTION, $image);
+                if (!empty($urlData['images'])) {
+                    foreach ($urlData['images'] as $image) {
+                        $path = \Storage::disk('minio')->put(
+                            self::PATH_UPLOAD_INSTRUCTION,
+                            $image
+                        );
+
                         $this->instructionImage->create([
-                            'commission_id' => $commission->commission_id,
+                            'url_id' => $url->id,
                             'image' => $path
                         ]);
-                    } catch (\Exception $e) {
-                        // dd($e->getMessage());
-                        continue;
                     }
                 }
             }
-
-            if (isset($data['key_word']) && $data['key_word'] !== $commission->key_word) {
-                try {
-                    if ($commission->key_word_image) {
-                        \Storage::disk('minio')->delete($commission->key_word_image);
-                    }
-
-                    $keyWordImagePath = generateTextImage(
-                        [$data['key_word']],
-                        self::PATH_UPLOAD_COMMISSION,
-                        'minio'
-                    );
-                    $data['key_word_image'] = $keyWordImagePath;
-                } catch (\Exception $e) {
-                    logger()->error("Lỗi khi xử lý ảnh từ khóa: " . $e->getMessage());
-                    $data['key_word_image'] = $commission->key_word_image;
-                }
-            } else {
-                $data['key_word_image'] = $commission->key_word_image;
-            }
-
-            $updateData = [
-                'key_word' => $data['key_word'] ?? $commission->key_word,
-                'url' => $data['url'] ?? $commission->url,
-                'daily_limit' => $data['daily_limit'] ?? $commission->daily_limit,
-                'key_word_image' => $data['key_word_image'],
-            ];
-
-            $commission->update($updateData);
 
             DB::commit();
             return redirect()->route('admin.commissions.index')
@@ -201,8 +179,7 @@ class CommissionController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            dd($e->getMessage());
-
+            logger()->error('Commission update error: ' . $e->getMessage());
             return back()->withInput()
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
@@ -212,16 +189,16 @@ class CommissionController extends Controller
     {
         DB::beginTransaction();
         try {
-            $commission = $this->commission->where('commission_id', $id)->first();
+            $commission = $this->commission->where('commission_id', $id)->firstOrFail();
 
-            \Storage::disk('minio')->delete($commission->key_word_image);
-
-            $instructionImages = $commission->images;
-
-            foreach ($instructionImages as $image) {
-                \Storage::disk('minio')->delete($image->image);
-                $image->delete();
+            foreach ($commission->urls as $url) {
+                foreach ($url->images as $image) {
+                    \Storage::disk('minio')->delete($image->image);
+                    $image->delete();
+                }
             }
+
+            $commission->urls()->delete();
 
             $commission->delete();
 
@@ -231,8 +208,7 @@ class CommissionController extends Controller
                 ->with('success', 'Xóa nhiệm vụ thành công!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 }

@@ -2,6 +2,7 @@
 namespace App\Services;
 
 use App\Models\Commission;
+use App\Models\CommissionUrl;
 use App\Models\Deposit;
 use App\Models\User;
 use App\Models\Worker;
@@ -15,6 +16,7 @@ class WorkerService
     protected $user;
     protected $worker;
     protected $commission;
+    protected $commissionUrl;
     protected $workerSession;
 
     const PATH_FAKE = 'fake';
@@ -26,26 +28,25 @@ class WorkerService
         User $user,
         Worker $worker,
         Commission $commission,
+        CommissionUrl $commissionUrl,
         WorkerSession $workerSession,
     ) {
         $this->deposit = $deposit;
         $this->user = $user;
         $this->worker = $worker;
         $this->commission = $commission;
+        $this->commissionUrl = $commissionUrl;
         $this->workerSession = $workerSession;
     }
 
-    // lấy nhiệm vụ cho người dùng:
-    // điều kiện pass: chưa bị ng dùng làm trong ngày, chưa đủ lượt daily_limit (lưojt truy cập cần), có lượt hoàn thành ít nhất trước (daily_completed)
     public function startWorker(array $data = [])
     {
         $imageData = [];
         $userId = $data['user_id'];
         $ip = $data['ip'];
-        // $numberRand = rand(3, 5);
         $numberRand = 2;
+        // $numberRand = random_int(3, 5);
 
-        // lấy nhiệm vụ
         $commission = $this->commission
             ->whereColumn('daily_completed', '<', 'daily_limit')
             ->whereDoesntHave('workers', function ($query) use ($userId, $ip) {
@@ -55,17 +56,20 @@ class WorkerService
                             ->orWhere('ip', $ip);
                     });
             })
-            ->with('images')
+            ->with([
+                'urls' => function ($query) {
+                    $query->with('images');
+                }
+            ])
             ->orderBy('daily_completed', 'asc')
             ->first();
-        // dd($commission);
 
         if (!$commission) {
             throw new \Exception('Không còn nhiệm vụ', Response::HTTP_NOT_FOUND);
         }
 
+        $randomUrl = $commission->urls->random();
         $infoFake = getRandomFakeInfo();
-        // dd($infoFake);
 
         $work = $this->worker->create([
             'worker_id' => \Str::uuid(),
@@ -73,6 +77,7 @@ class WorkerService
             'user_name' => $infoFake['name'],
             'user_phone' => $infoFake['phone'],
             'commission_id' => $commission->commission_id,
+            'commission_url_id' => $randomUrl->id,
             'ip' => $ip,
             'executed_at' => now()->toDateString(),
             'is_completed' => false,
@@ -83,33 +88,30 @@ class WorkerService
         Cache::put('limit_try' . $cacheLimit, self::LIMIT_TRY, now()->addMinutes(10));
         Cache::put('worker_limit_' . $work->worker_id, $numberRand, now()->addMinutes(10));
 
-        $imageIntructions = $commission->images;
+        $cacheUrlsKey = "worker_urls_" . $work->worker_id . $ip;
+        Cache::put($cacheUrlsKey, $commission->urls->keyBy('id')->toArray(), now()->addMinutes(10));
 
-        foreach ($imageIntructions as $img) {
-            $imageData[] = \Storage::disk('minio')->url($img['image']);
+        $cacheCurrentUrlKey = "current_url_" . $work->worker_id . $ip;
+        Cache::put($cacheCurrentUrlKey, $randomUrl->id, now()->addMinutes(10));
+
+        foreach ($randomUrl->images as $img) {
+            $imageData[] = \Storage::disk('minio')->url($img->image);
         }
-        // dd($imageData);
 
         $imagesUserInfo = generateTextImage(
-            [
-                'SĐT: ' . $infoFake['phone'],
-                'Tên: ' . $infoFake['name'],
-            ],
+            ['SĐT: ' . $infoFake['phone'], 'Tên: ' . $infoFake['name']],
             self::PATH_FAKE,
             'minio',
         );
 
-        // dd($imagesUserInfo);
-
-        $data = [
+        return [
             'worker_id' => $work->worker_id,
-            'keyWordImage' => \Storage::disk('minio')->url($commission->key_word_image),
+            'keyWordImage' => \Storage::disk('minio')->url($randomUrl->key_word_image),
             'imageData' => $imageData,
             'imagesUserInfo' => \Storage::disk('minio')->url($imagesUserInfo),
-            'numberRand' => $numberRand
+            'numberRand' => $numberRand,
+            'url' => $randomUrl->url
         ];
-
-        return $data;
     }
 
     public function cancelWorker(string $id)
@@ -170,6 +172,7 @@ class WorkerService
     {
         $phone = $data['user_phone'];
         $ip = $data['ip'];
+        $url = $data['url'];
         $cacheWaitTimeKey = $phone . '_' . $ip;
 
         $workerUser = $this->worker->select('worker_id', 'user_phone', 'ip', 'is_completed')
@@ -180,6 +183,18 @@ class WorkerService
 
         if (!$workerUser) {
             throw new \Exception('Số điện thoại không đúng', Response::HTTP_PRECONDITION_FAILED);
+        }
+
+        $cacheCurrentUrlKey = "current_url_" . $workerUser->worker_id . $ip;
+        $currentUrlId = Cache::get($cacheCurrentUrlKey);
+
+        $cacheUrlsKey = "worker_urls_" . $workerUser->worker_id . $ip;
+        $cachedUrls = Cache::get($cacheUrlsKey, []);
+
+        $currentUrl = $cachedUrls[$currentUrlId] ?? null;
+
+        if (!$currentUrl || $currentUrl['url'] !== $url) {
+            throw new \Exception('URL không hợp lệ', Response::HTTP_PRECONDITION_FAILED);
         }
 
         if (!Cache::has($cacheWaitTimeKey)) {
@@ -221,6 +236,7 @@ class WorkerService
     {
         $workerId = $data['worker_id'];
         $inputCode = $data['code'];
+        $ip = $data['ip'];
 
         $worker = $this->worker->where('worker_id', $workerId)->first();
 
@@ -233,6 +249,10 @@ class WorkerService
         $cacheLimitKey = 'worker_limit_' . $workerId;
         $cacheMatchCountKey = 'worker_match_count_' . $workerId;
         $cacheTryKey = 'limit_try' . $workerId . '_' . $worker->user_id;
+
+        $cacheUrlsKey = "worker_urls_" . $workerId . $ip;
+        $cacheCurrentUrlKey = "current_url_" . $workerId . $ip;
+        $cacheUsedUrlsKey = "used_urls_{$workerId}";
 
         if (!Cache::has($cacheCodeKey) || !Cache::has($cacheLimitKey)) {
             throw new \Exception('Code hoặc giới hạn lượt đã hết hạn', Response::HTTP_BAD_REQUEST);
@@ -271,17 +291,80 @@ class WorkerService
             'worker_session_id' => \Str::uuid(),
             'worker_id' => $workerId,
             'code' => $cachedCode,
-            'is_matched' => $isMatched,
-            'repeat_count' => $repeatLimit,
-            'current_repeat' => $currentRepeat
+            'is_matched' => $isMatched
         ]);
+
+        $worker->update(['is_completed' => true]);
 
         Cache::put($cacheRepeatKey, $currentRepeat, now()->addMinutes(10));
 
+        $newUrlData = null;
+
+        if (($isMatched || $limitTry <= 0) && $currentRepeat < $repeatLimit) {
+            $usedUrls = Cache::get($cacheUsedUrlsKey, []);
+            $cachedUrls = Cache::get($cacheUrlsKey, []);
+
+            $availableUrls = array_filter($cachedUrls, function ($url) use ($usedUrls) {
+                return !in_array($url['id'], $usedUrls);
+            });
+
+            if (!empty($availableUrls)) {
+                $newUrl = $availableUrls[array_rand($availableUrls)];
+                $newUrlId = $newUrl['id'];
+
+                $usedUrls[] = $newUrlId;
+                Cache::put($cacheUsedUrlsKey, $usedUrls, now()->addMinutes(10));
+                Cache::put($cacheCurrentUrlKey, $newUrlId, now()->addMinutes(10));
+
+                $newCode = \Str::random(9);
+                Cache::put($cacheCodeKey, $newCode, now()->addMinutes(10));
+
+                $newWorkerId = \Str::uuid();
+                $infoFake = getRandomFakeInfo();
+
+                $newWorker = $this->worker->create([
+                    'worker_id' => $newWorkerId,
+                    'user_id' => $worker->user_id,
+                    'user_name' => $infoFake['name'],
+                    'user_phone' => $infoFake['phone'],
+                    'commission_id' => $worker->commission_id,
+                    'commission_url_id' => $newUrlId,
+                    'ip' => $worker->ip,
+                    'executed_at' => now()->toDateString(),
+                    'is_completed' => false,
+                ]);
+
+                $newCacheLimit = $newWorkerId . '_' . $worker->user_id;
+                Cache::put('limit_try' . $newCacheLimit, self::LIMIT_TRY, now()->addMinutes(10));
+                Cache::put('worker_limit_' . $newWorkerId, 1, now()->addMinutes(10));
+
+                Cache::put("worker_urls_" . $newWorkerId . $ip, $cachedUrls, now()->addMinutes(10));
+                Cache::put("current_url_" . $newWorkerId . $ip, $newUrlId, now()->addMinutes(10));
+                Cache::put("used_urls_{$newWorkerId}", $usedUrls, now()->addMinutes(10));
+
+                $imagesUserInfo = generateTextImage(
+                    ['SĐT: ' . $infoFake['phone'], 'Tên: ' . $infoFake['name']],
+                    self::PATH_FAKE,
+                    'minio',
+                );
+
+                $imageData = [];
+                foreach ($newUrl['images'] as $img) {
+                    $imageData[] = \Storage::disk('minio')->url($img['image']);
+                }
+
+                $newUrlData = [
+                    'worker_id' => $newWorkerId,
+                    'url' => $newUrl['url'],
+                    'keyWordImage' => \Storage::disk('minio')->url($newUrl['key_word_image']),
+                    'imageData' => $imageData,
+                    'imagesUserInfo' => \Storage::disk('minio')->url($imagesUserInfo),
+                ];
+            }
+        }
+
         if ($currentRepeat === $repeatLimit) {
             if ($matchCount === $repeatLimit) {
-                $worker->is_completed = true;
-                $worker->save();
 
                 $this->deposit->create([
                     'user_id' => $worker->user_id,
@@ -292,9 +375,14 @@ class WorkerService
                 ]);
             }
 
+            Cache::forget($cacheCodeKey);
             Cache::forget($cacheRepeatKey);
             Cache::forget($cacheLimitKey);
             Cache::forget($cacheMatchCountKey);
+            Cache::forget($cacheTryKey);
+            Cache::forget($cacheUrlsKey);
+            Cache::forget($cacheCurrentUrlKey);
+            Cache::forget($cacheUsedUrlsKey);
         }
 
         $user = $this->user->where('user_id', $worker->user_id)->first();
@@ -305,6 +393,7 @@ class WorkerService
             'isLastAttempt' => $currentRepeat === $repeatLimit,
             'totalPoint' => $user->getPointAttribute(),
             'limitTry' => $limitTry,
+            'newUrl' => $newUrlData
         ];
     }
 }
