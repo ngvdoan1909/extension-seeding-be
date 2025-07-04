@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->uuid('worker_id')->unique();
             $table->uuid('user_id');
             $table->uuid('commission_id');
+            $table->uuid('commission_url_id');
             $table->ipAddress('ip');
             $table->date('executed_at');
             $table->boolean('is_completed')->default(false);

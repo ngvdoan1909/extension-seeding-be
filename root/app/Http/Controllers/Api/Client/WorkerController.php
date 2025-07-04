@@ -37,7 +37,7 @@ class WorkerController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->responseError($e->getCode(), $e->getMessage());
+            return $this->responseError(500, $e->getMessage());
         }
     }
 
@@ -55,7 +55,7 @@ class WorkerController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->responseError($e->getCode(), $e->getMessage());
+            return $this->responseError(500, $e->getMessage());
         }
     }
 
@@ -74,7 +74,7 @@ class WorkerController extends Controller
             );
 
         } catch (\Exception $e) {
-            return $this->responseError($e->getCode(), $e->getMessage());
+            return $this->responseError(500, $e->getMessage());
         }
     }
 
@@ -93,7 +93,7 @@ class WorkerController extends Controller
             );
 
         } catch (\Exception $e) {
-            return $this->responseError($e->getCode(), $e->getMessage());
+            return $this->responseError(500, $e->getMessage());
         }
     }
 
@@ -114,7 +114,8 @@ class WorkerController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->responseError($e->getCode(), $e->getMessage());
+            // dd($e->getMessage());
+            return $this->responseError(500, $e->getMessage());
         }
     }
 }
