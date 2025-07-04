@@ -47,49 +47,54 @@
                         </thead>
 
                         <tbody>
-                            @foreach ($data as $key => $item)
-                                <tr class="text-start">
-                                    <td>{{ $key + 1 }}</td>
-                                    <td>{{ $item->website->name }}</td>
-                                    <td>{{ $item->key_word }}</td>
-                                    <td>
-                                        <img style="width: auto; height: 100px; object-fit: cover;"
-                                            src="{{\Storage::disk('minio')->url($item->key_word_image)}}"
-                                            alt="{{$item->key_word}}">
-                                    </td>
-                                    <td>{{ $item->url }}</td>
-                                    <td>{{ $item->daily_limit }}</td>
-                                    <td>{{ $item->daily_completed }}</td>
-                                    <td>
-                                        <div class="dropdown d-inline-block">
-                                            <button class="btn btn-soft-secondary btn-sm dropdown" type="button"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="ri-more-fill align-middle"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li>
-                                                    <a href="{{ Route('admin.commissions.show', $item->commission_id) }}"
-                                                        class="dropdown-item edit-item-btn">
-                                                        <i class="ri-pencil-fill align-bottom me-2 text-muted"></i>
-                                                        Sửa
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <form action="{{ route('admin.commissions.destroy', $item->commission_id) }}"
-                                                        method="POST">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="dropdown-item remove-item-btn"
-                                                            onclick="return confirm('Bạn có chắc không?')">
-                                                            <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i>
-                                                            Xóa
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
+                            @foreach ($data as $commission)
+                                @foreach ($commission->urls as $key => $url)
+                                    <tr class="text-start">
+                                        <td>{{ $loop->parent->index * $commission->urls->count() + $key + 1 }}</td>
+                                        <td>{{ $commission->website->name }}</td>
+                                        <td>{{ $url->key_word }}</td>
+                                        <td>
+                                            @if($url->key_word_image)
+                                                <img style="width: auto; height: 100px; object-fit: cover;"
+                                                    src="{{ \Storage::disk('minio')->url($url->key_word_image) }}"
+                                                    alt="{{ $url->key_word }}">
+                                            @endif
+                                        </td>
+                                        <td>{{ $url->url }}</td>
+                                        <td>{{ $commission->daily_limit }}</td>
+                                        <td>{{ $commission->daily_completed }}</td>
+                                        <td>
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn btn-soft-secondary btn-sm dropdown" type="button"
+                                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="ri-more-fill align-middle"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <a href="{{ route('admin.commissions.show', $commission->commission_id) }}"
+                                                            class="dropdown-item edit-item-btn">
+                                                            <i class="ri-pencil-fill align-bottom me-2 text-muted"></i>
+                                                            Sửa
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <form
+                                                            action="{{ route('admin.commissions.destroy', $commission->commission_id) }}"
+                                                            method="POST">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="dropdown-item remove-item-btn"
+                                                                onclick="return confirm('Bạn có chắc không?')">
+                                                                <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i>
+                                                                Xóa
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
                             @endforeach
                         </tbody>
                     </table>
