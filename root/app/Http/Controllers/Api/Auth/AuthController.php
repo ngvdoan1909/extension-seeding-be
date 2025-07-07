@@ -93,7 +93,11 @@ class AuthController extends Controller
 
     public function profile()
     {
-        return response()->json(auth()->user());
+        $user = auth()->user();
+        $data = $user->toArray();
+        $data['point'] = $user->getPointAttribute();
+
+        return response()->json($data);
     }
 
     public function refresh()
