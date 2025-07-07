@@ -44,7 +44,8 @@ class WorkerService
         $imageData = [];
         $userId = $data['user_id'];
         $ip = $data['ip'];
-        $numberRand = random_int(3, 5);
+        // $numberRand = random_int(3, 5);
+        $numberRand = 2;
 
         $commission = $this->commission
             ->whereColumn('daily_completed', '<', 'daily_limit')
